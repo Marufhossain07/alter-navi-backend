@@ -1,6 +1,7 @@
 const express = require('express');
 const cors = require('cors');
 require('dotenv').config()
+const cookieParser = require('cookie-parser')
 const jwt = require('jsonwebtoken');
 const { MongoClient, ServerApiVersion } = require('mongodb');
 const port = process.env.PORT || 5000;
@@ -39,7 +40,10 @@ async function run() {
   try {
     // Connect the client to the server	(optional starting in v4.7)
     // await client.connect();
-    app.get('/jwt', (req,res)=>{
+    const queriesCollection = client.db('alterNavi').collection('queries');
+
+
+    app.get('/jwt', async(req,res)=>{
         const user = req.body;
         const token = jwt.sign(user, process.env.SECRET_KEY,{
             expiresIn: '1d'
@@ -47,6 +51,13 @@ async function run() {
         res.cookie('token', token, cookieOptions)
         
         .send({success : true})
+    })
+
+    app.post('/queries', async(req,res)=>{
+        const query = req.body;
+        const result = await queriesCollection.insertOne(query);
+
+        res.send(result)
     })
     // Send a ping to confirm a successful connection
     // await client.db("admin").command({ ping: 1 });
