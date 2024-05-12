@@ -96,6 +96,20 @@ async function run() {
       const result = await queriesCollection.findOne(query);
       res.send(result)
     })
+
+    app.post('/recommend', async(req,res)=>{
+      const recommendation = req.body;
+      const result = await recommendationsCollection.insertOne(recommendation);
+      const updateDoc = {
+        $inc : {
+          recommendationsCount: 1
+        }
+      }
+      const filter = { _id: new ObjectId(recommendation.queryId)}
+      const updatedCount = await queriesCollection.updateOne(filter, updateDoc);
+      console.log(updatedCount)
+      res.send(result)
+    })
     // Send a ping to confirm a successful connection
     // await client.db("admin").command({ ping: 1 });
     console.log("Pinged your deployment. You successfully connected to MongoDB!");
