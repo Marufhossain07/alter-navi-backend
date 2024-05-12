@@ -8,32 +8,32 @@ const port = process.env.PORT || 5000;
 const app = express();
 
 app.use(
-    cors({
-      origin: [
-        "http://localhost:5173",
-      ],
-      credentials: true,
-    })
-  );
+  cors({
+    origin: [
+      "http://localhost:5173",
+    ],
+    credentials: true,
+  })
+);
 app.use(express.json());
 app.use(cookieParser())
 
-const verifyToken = (req,res, next) =>{
-    const token = req.cookies?.token;
-    if(!token){
-        return res.status(401).send({ message : 'unauthorized access'});
-    }
-    if(token){
-        jwt.verify(token, process.env.SECRET_KEY, (err, dec)=>{
-            if (err){
-                return res.status(401).send({ message : 'unauthorized access'})
-            }
-            else {
-                req.user = dec;
-                next();
-            }
-        })
-    }
+const verifyToken = (req, res, next) => {
+  const token = req.cookies?.token;
+  if (!token) {
+    return res.status(401).send({ message: 'unauthorized access' });
+  }
+  if (token) {
+    jwt.verify(token, process.env.SECRET_KEY, (err, dec) => {
+      if (err) {
+        return res.status(401).send({ message: 'unauthorized access' })
+      }
+      else {
+        req.user = dec;
+        next();
+      }
+    })
+  }
 }
 
 
@@ -48,10 +48,10 @@ const client = new MongoClient(uri, {
   }
 });
 const cookieOptions = {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
-    sameSite: process.env.NODE_ENV === "production" ? "none" : "strict",
-  };
+  httpOnly: true,
+  secure: process.env.NODE_ENV === "production",
+  sameSite: process.env.NODE_ENV === "production" ? "none" : "strict",
+};
 
 async function run() {
   try {
@@ -61,53 +61,82 @@ async function run() {
     const recommendationsCollection = client.db('alterNavi').collection('recommendations')
 
 
-    app.get('/jwt', async(req,res)=>{
-        const user = req.body;
-        const token = jwt.sign(user, process.env.SECRET_KEY,{
-            expiresIn: '1d'
-        })
-        res.cookie('token', token, cookieOptions)
-        
-        .send({success : true})
+    app.get('/jwt', async (req, res) => {
+      const user = req.body;
+      const token = jwt.sign(user, process.env.SECRET_KEY, {
+        expiresIn: '1d'
+      })
+      res.cookie('token', token, cookieOptions)
+
+        .send({ success: true })
     })
 
-    app.post('/add-query', async(req,res)=>{
-        const query = req.body;
-        const result = await queriesCollection.insertOne(query);
+    app.post('/add-query', async (req, res) => {
+      const query = req.body;
+      const result = await queriesCollection.insertOne(query);
 
-        res.send(result)
+      res.send(result)
     })
-    app.get('/queries', async(req,res)=>{
-        const cursor = queriesCollection.find();
-        const result = await cursor.toArray();
-        res.send(result)
+    app.get('/queries', async (req, res) => {
+      const cursor = queriesCollection.find();
+      const result = await cursor.toArray();
+      res.send(result)
     })
 
-    app.get('/my-queries/:email', async(req,res)=>{
+    app.get('/my-queries/:email', async (req, res) => {
       const email = req.params.email;
-      const query = {email: email}
+      const query = { email: email }
       const result = await queriesCollection.find(query).toArray();
       res.send(result)
     })
 
-    app.get('/queries/:id', async(req,res)=>{
+    app.get('/queries/:id', async (req, res) => {
       const id = req.params.id;
-      const query = {_id:new ObjectId(id)}
+      const query = { _id: new ObjectId(id) }
       const result = await queriesCollection.findOne(query);
       res.send(result)
     })
 
-    app.post('/recommend', async(req,res)=>{
+    app.post('/recommend', async (req, res) => {
       const recommendation = req.body;
       const result = await recommendationsCollection.insertOne(recommendation);
       const updateDoc = {
-        $inc : {
+        $inc: {
           recommendationsCount: 1
         }
       }
-      const filter = { _id: new ObjectId(recommendation.queryId)}
+      const filter = { _id: new ObjectId(recommendation.queryId) }
       const updatedCount = await queriesCollection.updateOne(filter, updateDoc);
       console.log(updatedCount)
+      res.send(result)
+    })
+
+    app.get('/recommendations/:id', async(req, res) => {
+      const id = req.params.id;
+      const query = { queryId: id};
+      const result = await recommendationsCollection.find(query).toArray();
+      res.send(result)
+    })
+
+    app.get('/my-recommendations/:recEmail', async(req,res)=>{
+      const email = req.params.recEmail;
+      const query = {recEmail: email};
+      const result= await recommendationsCollection.find(query).toArray();
+      res.send(result)
+    })
+
+    app.delete('/my-recommendations/:queryId/:id', async(req,res)=>{
+      const queryId = req.params.queryId;
+      const id = req.params.id;
+      const query = { _id: new ObjectId(id)}
+      const filter = { _id: new ObjectId(queryId) }
+      const updateDoc = {
+        $inc: {
+          recommendationsCount: -1
+        }
+      }
+      const updatedCount = await queriesCollection.updateOne(filter, updateDoc);
+      const result= await recommendationsCollection.deleteOne(query);
       res.send(result)
     })
     // Send a ping to confirm a successful connection
@@ -121,9 +150,9 @@ async function run() {
 run().catch(console.dir);
 
 
-app.get('/', (req,res)=>{
-    res.send('server is runnig very high')
+app.get('/', (req, res) => {
+  res.send('server is runnig very high')
 })
-app.listen(port, ()=>{
-    console.log(`the server is runnig on this port ${port}`)
+app.listen(port, () => {
+  console.log(`the server is runnig on this port ${port}`)
 })
