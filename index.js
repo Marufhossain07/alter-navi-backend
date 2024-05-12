@@ -16,8 +16,25 @@ app.use(
     })
   );
 app.use(express.json());
+app.use(cookieParser())
 
-
+const verifyToken = (req,res, next) =>{
+    const token = req.cookies?.token;
+    if(!token){
+        return res.status(401).send({ message : 'unauthorized access'});
+    }
+    if(token){
+        jwt.verify(token, process.env.SECRET_KEY, (err, dec)=>{
+            if (err){
+                return res.status(401).send({ message : 'unauthorized access'})
+            }
+            else {
+                req.user = dec;
+                next();
+            }
+        })
+    }
+}
 
 
 const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@cluster0.vo0jwvs.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0`;
@@ -53,11 +70,23 @@ async function run() {
         .send({success : true})
     })
 
-    app.post('/queries', async(req,res)=>{
+    app.post('/add-query', async(req,res)=>{
         const query = req.body;
         const result = await queriesCollection.insertOne(query);
 
         res.send(result)
+    })
+    app.get('/queries', async(req,res)=>{
+        const cursor = queriesCollection.find();
+        const result = await cursor.toArray();
+        res.send(result)
+    })
+
+    app.get('/queries/:email', async(req,res)=>{
+      const email = req.params.email;
+      const query = {email: email}
+      const result = await queriesCollection.find(query).toArray();
+      res.send(result)
     })
     // Send a ping to confirm a successful connection
     // await client.db("admin").command({ ping: 1 });
