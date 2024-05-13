@@ -85,8 +85,20 @@ async function run() {
 
     app.get('/my-queries/:email', async (req, res) => {
       const email = req.params.email;
-      const query = { email: email }
-      const result = await queriesCollection.find(query).toArray();
+      const query = { email: email };
+      const options = {
+        sort: {
+          time: -1
+        }
+      }
+      const result = await queriesCollection.find(query, options).toArray();
+      res.send(result)
+    })
+
+    app.delete('/my-queries/:id', async (req, res) => {
+      const id = req.params.id;
+      const query = { _id: new ObjectId(id) };
+      const result = await queriesCollection.deleteOne(query);
       res.send(result)
     })
 
@@ -94,7 +106,7 @@ async function run() {
       const id = req.params.id;
       const query = { _id: new ObjectId(id) }
       const result = await queriesCollection.findOne(query);
-      res.send(result)
+      res.send(result);
     })
 
     app.post('/recommend', async (req, res) => {
@@ -111,24 +123,46 @@ async function run() {
       res.send(result)
     })
 
-    app.get('/recommendations/:id', async(req, res) => {
+    app.get('/recommendations/:id', async (req, res) => {
       const id = req.params.id;
-      const query = { queryId: id};
+      const query = { queryId: id };
       const result = await recommendationsCollection.find(query).toArray();
       res.send(result)
     })
 
-    app.get('/my-recommendations/:recEmail', async(req,res)=>{
+    app.get('/my-recommendations/:recEmail', async (req, res) => {
       const email = req.params.recEmail;
-      const query = {recEmail: email};
-      const result= await recommendationsCollection.find(query).toArray();
+      const query = { recEmail: email };
+      const result = await recommendationsCollection.find(query).toArray();
       res.send(result)
     })
 
-    app.delete('/my-recommendations/:queryId/:id', async(req,res)=>{
+    app.put('/queries/:id', async (req, res) => {
+      const id = req.params.id;
+      const updatedQuery = req.body;
+      const filter = { _id: new ObjectId(id) };
+      const options = {
+        upsert: true
+      }
+      const updatedDoc = {
+        $set: {
+          product: updatedQuery.product,
+          photo: updatedQuery.photo,
+          brand: updatedQuery.brand,
+          details: updatedQuery.details,
+          title: updatedQuery.title,
+          time: updatedQuery.time,
+        }
+      }
+
+      const result = await queriesCollection.updateOne(filter, updatedDoc , options);
+      res.send(result)
+    })
+
+    app.delete('/my-recommendations/:queryId/:id', async (req, res) => {
       const queryId = req.params.queryId;
       const id = req.params.id;
-      const query = { _id: new ObjectId(id)}
+      const query = { _id: new ObjectId(id) }
       const filter = { _id: new ObjectId(queryId) }
       const updateDoc = {
         $inc: {
@@ -136,7 +170,7 @@ async function run() {
         }
       }
       const updatedCount = await queriesCollection.updateOne(filter, updateDoc);
-      const result= await recommendationsCollection.deleteOne(query);
+      const result = await recommendationsCollection.deleteOne(query);
       res.send(result)
     })
     // Send a ping to confirm a successful connection
@@ -151,8 +185,8 @@ run().catch(console.dir);
 
 
 app.get('/', (req, res) => {
-  res.send('server is runnig very high')
+  res.send('server is running very high')
 })
 app.listen(port, () => {
-  console.log(`the server is runnig on this port ${port}`)
+  console.log(`the server is running on this port ${port}`)
 })
