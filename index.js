@@ -61,7 +61,7 @@ async function run() {
     const recommendationsCollection = client.db('alterNavi').collection('recommendations')
 
 
-    app.get('/jwt', async (req, res) => {
+    app.post('/jwt', async (req, res) => {
       const user = req.body;
       const token = jwt.sign(user, process.env.SECRET_KEY, {
         expiresIn: '1d'
@@ -71,6 +71,14 @@ async function run() {
         .send({ success: true })
     })
 
+    app.get("/logout", async (req, res) => {
+      const user = req.body;
+      console.log("logging out", user);
+      res
+        .clearCookie("token", { ...cookieOptions, maxAge: 0 })
+        .send({ success: true });
+    });
+
     app.post('/add-query', async (req, res) => {
       const query = req.body;
       const result = await queriesCollection.insertOne(query);
@@ -78,12 +86,20 @@ async function run() {
       res.send(result)
     })
     app.get('/queries', async (req, res) => {
-      const cursor = queriesCollection.find();
-      const result = await cursor.toArray();
+      const search = req.query.search;
+      let query = {}
+      if (search) {
+        query = {
+          product: { $regex: search, $options: 'i' },
+        }
+      }
+
+
+      const result = await queriesCollection.find(query).toArray()
       res.send(result)
     })
 
-    app.get('/my-queries/:email', async (req, res) => {
+    app.get('/my-queries/:email', verifyToken, async (req, res) => {
       const email = req.params.email;
       const query = { email: email };
       const options = {
@@ -95,7 +111,7 @@ async function run() {
       res.send(result)
     })
 
-    app.delete('/my-queries/:id', async (req, res) => {
+    app.delete('/my-queries/:id', verifyToken, async (req, res) => {
       const id = req.params.id;
       const query = { _id: new ObjectId(id) };
       const result = await queriesCollection.deleteOne(query);
@@ -130,9 +146,16 @@ async function run() {
       res.send(result)
     })
 
-    app.get('/my-recommendations/:recEmail', async (req, res) => {
+    app.get('/my-recommendations/:recEmail', verifyToken, async (req, res) => {
       const email = req.params.recEmail;
       const query = { recEmail: email };
+      const result = await recommendationsCollection.find(query).toArray();
+      res.send(result)
+    })
+
+    app.get('/recommendations-for-me/:email', verifyToken, async (req, res) => {
+      const email = req.params.email;
+      const query = { email: email };
       const result = await recommendationsCollection.find(query).toArray();
       res.send(result)
     })
@@ -155,11 +178,11 @@ async function run() {
         }
       }
 
-      const result = await queriesCollection.updateOne(filter, updatedDoc , options);
+      const result = await queriesCollection.updateOne(filter, updatedDoc, options);
       res.send(result)
     })
 
-    app.delete('/my-recommendations/:queryId/:id', async (req, res) => {
+    app.delete('/my-recommendations/:queryId/:id', verifyToken, async (req, res) => {
       const queryId = req.params.queryId;
       const id = req.params.id;
       const query = { _id: new ObjectId(id) }
