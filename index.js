@@ -10,9 +10,12 @@ const app = express();
 app.use(
   cors({
     origin: [
+      "https://alter-navi.web.app",
       "http://localhost:5173",
+      "https://alter-navi.firebaseapp.com"
     ],
     credentials: true,
+    optionSuccessStatus: 200
   })
 );
 app.use(express.json());
